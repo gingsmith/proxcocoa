@@ -8,15 +8,15 @@ import scala.math._
 object OptUtils {
 
   /**
-  * Loads data stored in LIBSVM format columnwise (i.e., by feature)
-  * Used for storing training dataset
-  *
-  * @param sc SparkContext
-  * @param filename location of data
-  * @param numSplits number of data splits
-  * @param numFeats number of features in the dataset
-  * @return
-  */
+    * Loads data stored in LIBSVM format columnwise (i.e., by feature)
+    * Used for storing training dataset
+    *
+    * @param sc SparkContext
+    * @param filename location of data
+    * @param numSplits number of data splits
+    * @param numFeats number of features in the dataset
+    * @return
+    */
   def loadLIBSVMDataColumn(sc: SparkContext, filename: String, numSplits: Int, 
     numFeats: Int): (RDD[(Int, SparseVector[Double])], DenseVector[Double]) = {
 
@@ -70,15 +70,15 @@ object OptUtils {
 
 
   /**
-  * Loads data stored in LIBSVM format
-  * Used for storing test dataset
-  *
-  * @param sc SparkContext
-  * @param filename location of data
-  * @param numSplits number of data splits
-  * @param numFeats number of features in the dataset
-  * @return
-  */
+    * Loads data stored in LIBSVM format
+    * Used for storing test dataset
+    *
+    * @param sc SparkContext
+    * @param filename location of data
+    * @param numSplits number of data splits
+    * @param numFeats number of features in the dataset
+    * @return
+    */
   def loadLIBSVMData(sc: SparkContext, filename: String, numSplits: Int, 
     numFeats: Int): RDD[LabeledPoint] = {
 
@@ -124,33 +124,31 @@ object OptUtils {
   }
 
   /**
-  * Computes the primal objective function value for elastic net regression:
-  *   1/(2n)||y-x'w||_2^2 + \lambda * (eta*||w||_1 + (1-eta)*.5*||w||_2^2)
-  * Caution: use for debugging purposes. This is an expensive operation, 
-  *   taking one full pass through the data
-  *
-  * @param z residual vector
-  * @param w primal vector
-  * @param lambda regularization parameter
-  * @param eta elastic net parameter
-  * @return
-  */
-  def computeElasticNetObjective(z: Vector[Double], w: Vector[Double], 
-    lambda: Double,eta: Double): Double = {
-    val err = z.norm(2) 
-    val regularization = lambda * (eta * w.norm(1) + (1 - eta) * .5 * w.norm(2))
+    * Computes the primal objective function value for elastic net regression:
+    * 1/(2n)||A * x - b||_2^2 + \lambda * (eta*||x||_1 + (1-eta)*.5*||x||_2^2)
+    *
+    * @param x primal variable vector (called alpha in the paper)
+    * @param z residual vector z = A * x - b (called w in the paper)
+    * @param lambda regularization parameter
+    * @param eta elastic net parameter
+    * @return
+    */
+  def computeElasticNetObjective(x: Vector[Double], z: Vector[Double],
+                                 lambda: Double, eta: Double): Double = {
+    val err = z.norm(2)
+    val regularization = lambda * (eta * x.norm(1) + (1 - eta) * .5 * x.norm(2))
     return err * err / (2 * z.size) + regularization
   }
 
   /**
-  * Computes the RMSE on a test dataset
-  *
-  * @param testData RDD of labeledpoints
-  * @param w primal vector
-  * @return
-  */
-  def computeRMSE(testData: RDD[LabeledPoint], w: Vector[Double]): Double = {
-    val squared_err = testData.map(pt => pow(((pt.features dot w) - pt.label),2)).mean()
+    * Computes the RMSE on a test dataset
+    *
+    * @param testData RDD of labeledPoints
+    * @param x primal variable vector (called alpha in the paper)
+    * @return
+    */
+  def computeRMSE(testData: RDD[LabeledPoint], x: Vector[Double]): Double = {
+    val squared_err = testData.map(pt => pow(((pt.features dot x) - pt.label), 2)).mean()
     return sqrt(squared_err)
   }
 
