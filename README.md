@@ -1,7 +1,9 @@
 # ProxCoCoA+
 A primal-dual framework for distributed L1-regularized optimization
 
-The present code trains a standard least squares sparse regression with L1 or elastic net regularizer. The proxCoCoA framework runs on the primal optimization problem (Called D in the paper). To solve the data-local subproblems on each machine, randomized coordinate descent is used as a local solver. The code can be easily adapted to include other internal solvers or to solve other data-fit objectives and other regularizers.
+The present code trains a standard least squares sparse regression with L1 or elastic net regularizer. The proxCoCoA framework runs on the primal optimization problem (Called D in the paper). To solve the data-local subproblems on each machine, an arbitrary solver can be used. In this example we use randomized coordinate descent as the local solver, as the l1-regularized single coordinate problems have simple closed form solutions.
+
+The code can be easily adapted to include other internal solvers or to solve other data-fit objectives and other regularizers.
 
 ## Getting Started
 How to run the code locally:
@@ -16,4 +18,4 @@ sbt/sbt assembly
 ## References
 The algorithmic framework is described in more detail in the following paper:
 
-_Smith, V., Forte, S., Jordan, M.I., Jaggi, M. [L1-Regularized Distributed Optimization: A Communication-Efficient Primal-Dual Framework](http://arxiv.org/abs/1512.04011)
+_Smith, V., Forte, S., Jordan, M.I., Jaggi, M. [L1-Regularized Distributed Optimization: A Communication-Efficient Primal-Dual Framework](http://arxiv.org/abs/1512.04011)_
