@@ -10,16 +10,17 @@ import scala.math._
 object ProxCoCoAp {
 
   /**
-   * ProxCoCoAp - A primal-dual framework for L1-reguarlized distributed optimization.
-   * Here implemented for Elastic Net regression (including Lasso and Ridge as special cases).
-   * Uses SCD as the local method.
-   * 
-   * @param data RDD of all data examples
-   * @param labels Array of data labels
-   * @param params algorithmic parameters
-   * @param debug systems/debugging parameters
-   * @return
-   */
+    * ProxCoCoAp - A primal-dual framework for L1-reguarlized distributed optimization.
+    * Here implemented for Elastic Net regularized least squares regression
+    * (including Lasso and Ridge as special cases).
+    * Uses randomized coordinate descent as the internal local method.
+    *
+    * @param data RDD of all data columns (columns of the data matrix A in the paper)
+    * @param labels Array of data labels
+    * @param params algorithmic parameters
+    * @param debug systems/debugging parameters
+    * @return
+    */
   def runProxCoCoAp(
     data: RDD[(Int, SparseVector[Double])],
     labels: Vector[Double],
@@ -29,10 +30,10 @@ object ProxCoCoAp {
     // prepare to run framework
     val dataArr = data.mapPartitions(x => (Iterator(x.toArray))).cache()
     val parts = dataArr.count().toInt
-    println("\nRunning ProxCoCoA+ on " + params.n + " data examples, distributed over " 
+    println("\nRunning ProxCoCoA+ on " + params.n + " data columns, distributed over "
       + parts + " workers")
-    var w = params.wInit // primal weight vector
-    var z = labels.copy // residual vector
+    var alpha = params.alphaInit // primal weight vector
+    var w = labels.copy // residual vector w = A * alpha - b
     var elapsedTime = 0.0
 
     // run for numRounds rounds
@@ -41,58 +42,58 @@ object ProxCoCoAp {
       // start time
       val tstart = System.currentTimeMillis
 
-      // find updates to w, z
+      // find updates to alpha, w
       val updates = dataArr.mapPartitions(
-        localCD(_, w, z, params.localIters, params.eta, params.lambda, params.n, 
+        localCD(_, alpha, w, params.localIters, params.eta, params.lambda, params.n,
           parts, debug.seed+t), preservesPartitioning=true).persist()
       val primalUpdates = updates.map(kv => kv._1).treeReduce(_ + _)
-      w += primalUpdates
+      alpha += primalUpdates
       val residualUpdates = updates.map(kv => kv._2).treeReduce(_ + _)
-      z += residualUpdates
+      w += residualUpdates
 
-      // optionally calculate primal objective and test rmse
+      // optionally calculate optimization objective and test RMSE
       elapsedTime = elapsedTime + (System.currentTimeMillis-tstart)
       if (debug.debugIter > 0 && t % debug.debugIter == 0) {
         println(t + "," + elapsedTime + "," 
-          + OptUtils.computeElasticNetObjective(z, w, params.lambda, params.eta))
+          + OptUtils.computeElasticNetObjective(alpha, w, params.lambda, params.eta))
         if(debug.testData != null) println("Test RMSE: " 
-          + OptUtils.computeRMSE(debug.testData, w))
+          + OptUtils.computeRMSE(debug.testData, alpha))
       }
     }
 
     // return final weight vector
-    w
+    alpha
   }
 
   /**
-   * This is an implementation of a local solver, here coordinate descent (CD),
-   * that takes information from other workers into account through the shared vector z.
-   * Here we perform coordinate updates for the elastic net primal objective.
-   *
-   * @param localDataItr the local data, split by feature
-   * @param wInit current primal variables w
-   * @param zInit current residual variables z
-   * @param localIters number of local coordinates to update
-   * @param eta elastic net parameter
-   * @param lambda regularization parameter
-   * @param n number of data examples
-   * @param k number of splits
-   * @param seed
-   */
+    * This is an implementation of a local solver, here coordinate descent (CD),
+    * that takes information from other workers into account through the shared vector w.
+    * Here we perform coordinate updates for the elastic net primal objective.
+    *
+    * @param localDataItr the local data, split by feature
+    * @param alphaInit current variables x (called alpha in the paper)
+    * @param wInit current residual vector w = A * x - b
+    * @param localIters number of local coordinates to update
+    * @param eta elastic net parameter
+    * @param lambda regularization parameter
+    * @param n total number of columns of the data matrix A (not only local)
+    * @param k number of splits
+    * @param seed
+    */
   def localCD(
-    localDataItr: Iterator[Array[(Int, SparseVector[Double])]], 
-    wInit: Vector[Double],
-    zInit: Vector[Double], 
-    localIters: Int, 
-    eta: Double,
-    lambda: Double, 
-    n: Int,
-    k: Int,
-    seed: Int): Iterator[(Vector[Double], Vector[Double])] = {
+               localDataItr: Iterator[Array[(Int, SparseVector[Double])]],
+               alphaInit: Vector[Double],
+               wInit: Vector[Double],
+               localIters: Int,
+               eta: Double,
+               lambda: Double,
+               n: Int,
+               k: Int,
+               seed: Int): Iterator[(Vector[Double], Vector[Double])] = {
 
     val localData = localDataItr.next()
-    val w = wInit.copy
-    var z = zInit.copy
+    val alpha = alphaInit.copy
+    var w = wInit.copy
     val nLocal = localData.length
     val r = new scala.util.Random(seed)
 
@@ -105,29 +106,29 @@ object ProxCoCoAp {
       val idx = r.nextInt(nLocal)
       val currFeat = localData(idx)._2
       val j = localData(idx)._1
-      val wj_old = w(j)
+      val alphaj_old = alpha(j)
 
       // calculate update
       val aj = pow(currFeat.norm(2), 2)
-      val grad = ((currFeat dot z) / (aj * k)) + wj_old
+      val grad = ((currFeat dot w) / (aj * k)) + alphaj_old
 
       // apply soft thresholding
       val threshold = (n * lambda / (aj * k)) * eta
-      w(j) = (signum(grad) * max(0.0, abs(grad) - threshold)) / denom
+      alpha(j) = (signum(grad) * max(0.0, abs(grad) - threshold)) / denom
 
       // find change in primal vector
-      val diff = wj_old - w(j)
+      val diff = alphaj_old - alpha(j)
 
       // update residual vector
-      z += currFeat * (diff * (k))
+      w += currFeat * (diff * (k))
 
       i += 1
     }
 
-    // return changes to w, z
-    val deltaW = w - wInit
-    val deltaZ = (z - zInit) / (k.toDouble)
-    Iterator((deltaW, deltaZ))
+    // return changes to alpha, w
+    val deltaAlpha = alpha - alphaInit
+    val deltaW = (w - wInit) / (k.toDouble)
+    Iterator((deltaAlpha, deltaW))
   }
 
 }
