@@ -68,10 +68,10 @@ object driver {
     // compute H, # of local iterations
     var localIters = (localIterFrac * numFeatures / data.partitions.size).toInt
     localIters = Math.max(localIters,1)
-    val wInit = SparseVector.zeros[Double](numFeatures)
+    val alphaInit = SparseVector.zeros[Double](numFeatures)
 
     // set parameters
-    val params = Params(wInit, n, numRounds, localIters, lambda, eta)
+    val params = Params(alphaInit, n, numRounds, localIters, lambda, eta)
     val debug = DebugParams(testData, debugIter, seed)
 
 
@@ -79,7 +79,7 @@ object driver {
      * Run ProxCoCoA+
      */
 
-    val finalwCoCoA = ProxCoCoAp.runProxCoCoAp(data, labels, params, debug)
+    val finalAlphaCoCoA = ProxCoCoAp.runProxCoCoAp(data, labels, params, debug)
     sc.stop()
   }
 }

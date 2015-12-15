@@ -7,7 +7,7 @@ import org.apache.spark.SparkContext
 case class LabeledPoint(val label: Double, val features: SparseVector[Double])
 
 /** Algorithm Params
-   * @param xInit initial weight vector (zero)
+   * @param alphaInit initial weight vector (zero)
    * @param n number of data points
    * @param numRounds number of outer iterations T in the paper
    * @param localIters number of inner localSDCA iterations, H in the paper
@@ -15,7 +15,7 @@ case class LabeledPoint(val label: Double, val features: SparseVector[Double])
    * @param eta elastic net parameter: eta=1.0 gives lasso, eta=0.0 gives ridge regression
    */
 case class Params(
-                   xInit: Vector[Double],
+                   alphaInit: Vector[Double],
                    n: Int,
                    numRounds: Int,
                    localIters: Int,

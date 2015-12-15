@@ -125,30 +125,30 @@ object OptUtils {
 
   /**
     * Computes the primal objective function value for elastic net regression:
-    * 1/(2n)||A * x - b||_2^2 + \lambda * (eta*||x||_1 + (1-eta)*.5*||x||_2^2)
+    * 1/(2n)||A * alpha - b||_2^2 + \lambda * (eta*||alpha||_1 + (1-eta)*.5*||alpha||_2^2)
     *
-    * @param x primal variable vector (called alpha in the paper)
-    * @param z residual vector z = A * x - b (called w in the paper)
+    * @param alpha primal variable vector
+    * @param w residual vector w = A * alpha - b
     * @param lambda regularization parameter
     * @param eta elastic net parameter
     * @return
     */
-  def computeElasticNetObjective(x: Vector[Double], z: Vector[Double],
+  def computeElasticNetObjective(alpha: Vector[Double], w: Vector[Double],
                                  lambda: Double, eta: Double): Double = {
-    val err = z.norm(2)
-    val regularization = lambda * (eta * x.norm(1) + (1 - eta) * .5 * x.norm(2))
-    return err * err / (2 * z.size) + regularization
+    val err = w.norm(2)
+    val regularization = lambda * (eta * alpha.norm(1) + (1 - eta) * .5 * alpha.norm(2))
+    return err * err / (2 * w.size) + regularization
   }
 
   /**
     * Computes the RMSE on a test dataset
     *
     * @param testData RDD of labeledPoints
-    * @param x primal variable vector (called alpha in the paper)
+    * @param alpha primal variable vector
     * @return
     */
-  def computeRMSE(testData: RDD[LabeledPoint], x: Vector[Double]): Double = {
-    val squared_err = testData.map(pt => pow(((pt.features dot x) - pt.label), 2)).mean()
+  def computeRMSE(testData: RDD[LabeledPoint], alpha: Vector[Double]): Double = {
+    val squared_err = testData.map(pt => pow(((pt.features dot alpha) - pt.label), 2)).mean()
     return sqrt(squared_err)
   }
 
