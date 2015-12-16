@@ -1,7 +1,7 @@
 # ProxCoCoA+
-A primal-dual framework for distributed L1-regularized optimization.
+A primal-dual framework for distributed L1-regularized optimization, running on [Apache Spark](spark.apache.org).
 
-This code trains a standard least squares sparse regression with L1 or elastic net regularizer. The proxCoCoA+ framework runs on the primal optimization problem (called D in the paper). To solve the data-local subproblems on each machine, an arbitrary solver can be used. In this example we use randomized coordinate descent as the local solver, as the L1-regularized single coordinate problems have simple closed-form solutions.
+This code trains a standard least squares sparse regression with L1 or elastic net regularizer. The proxCoCoA+ framework runs on the primal optimization problem (called D in [the paper](http://arxiv.org/pdf/1512.04011)). To solve the data-local subproblems on each machine, an arbitrary solver can be used. In this example we use randomized coordinate descent as the local solver, as the L1-regularized single coordinate problems have simple closed-form solutions.
 
 The code can be easily adapted to include other internal solvers or to solve other data-fit objectives or regularizers.
 
