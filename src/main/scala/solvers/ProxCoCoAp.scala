@@ -100,7 +100,7 @@ object ProxCoCoAp {
 
     // perform local udpates
     var i = 0
-    val denom = 1.0 + (lambda * (1.0 - eta))
+    val denom = lambda * n * (1-eta)
     while(i < localIters) {
 
       // gather current feature
@@ -111,11 +111,11 @@ object ProxCoCoAp {
 
       // calculate update
       val aj = pow(currFeat.norm(2), 2)
-      val grad = ((currFeat dot w) / (aj * sigma)) + alphaj_old
+      val grad = ((currFeat dot w) / (aj * sigma + denom)) + (alphaj_old / (denom / (aj * sigma) + 1.0))
 
       // apply soft thresholding
-      val threshold = (n * lambda / (aj * sigma)) * eta
-      alpha(j) = (signum(grad) * max(0.0, abs(grad) - threshold)) / denom
+      val threshold = (n * lambda * eta) / (aj * sigma + denom)
+      alpha(j) = (signum(grad) * max(0.0, abs(grad) - threshold))
 
       // find change in primal vector
       val diff = alphaj_old - alpha(j)

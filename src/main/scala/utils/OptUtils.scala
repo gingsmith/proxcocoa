@@ -145,7 +145,8 @@ object OptUtils {
       lambda: Double,
       eta: Double): Double = {
     val err = w.norm(2)
-    val regularization = lambda * (eta * alpha.norm(1) + (1 - eta) * .5 * alpha.norm(2))
+    val twonorm = alpha.norm(2)
+    val regularization = lambda * (eta * alpha.norm(1) + (1 - eta) * .5 * twonorm * twonorm)
     return err * err / (2 * w.size) + regularization
   }
 
